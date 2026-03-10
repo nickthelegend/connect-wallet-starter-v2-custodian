@@ -43,14 +43,17 @@ export class AlgoWalletProvider implements CustomProvider {
         return undefined
     }
 
-    async signTransactions(
-        txnGroup: algosdk.Transaction[] | Uint8Array[],
+    async signTransactions<T extends algosdk.Transaction[] | Uint8Array[]>(
+        txnGroup: T | T[],
         indexesToSign?: number[]
     ): Promise<(Uint8Array | null)[]> {
         console.log('[AlgoVault] Signing transactions:', txnGroup)
 
+        // Ensure we're working with a single group of transactions
+        const firstGroup = Array.isArray(txnGroup[0]) ? (txnGroup[0] as unknown as (algosdk.Transaction | Uint8Array)[]) : (txnGroup as unknown as (algosdk.Transaction | Uint8Array)[])
+
         // Properly serialize Transactions to Base64 msgpack for the popup
-        const txnsToSign = txnGroup.map(t => {
+        const txnsToSign = firstGroup.map(t => {
             const bytes = t instanceof Uint8Array ? t : algosdk.encodeUnsignedTransaction(t)
             return Buffer.from(bytes).toString('base64')
         })
@@ -65,7 +68,12 @@ export class AlgoWalletProvider implements CustomProvider {
                 if (event.data.type === 'ALGO_WALLET_RESPONSE') {
                     console.log('[AlgoVault] Signing complete')
                     window.removeEventListener('message', handler)
-                    resolve(event.data.signedTxns)
+
+                    // Decode base64 strings back to Uint8Arrays
+                    const signedTxns = event.data.signedTxns.map((s: string | null) =>
+                        s ? new Uint8Array(Buffer.from(s, 'base64')) : null
+                    )
+                    resolve(signedTxns)
                 }
             }
 

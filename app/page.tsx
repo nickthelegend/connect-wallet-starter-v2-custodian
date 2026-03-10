@@ -126,12 +126,21 @@ function SignTransactionDebug() {
       }
 
       setStatus(`Signing Group...`)
-      const result = await signTransactions(txns)
-      console.log(`[SDK] Result for ${type}:`, result)
-      setStatus(`${type} processed successfully!`)
+      const signedTxns = await signTransactions(txns)
+
+      setStatus(`Sending to Network...`)
+      // Convert to a non-null Array if necessary or cast it as such
+      const result = await algodClient.sendRawTransaction(signedTxns as Uint8Array[]).do()
+
+      setStatus(`Waiting for confirmation for TxID: ${result.txid}...`)
+      const confirmedTxn = await algosdk.waitForConfirmation(algodClient, result.txid, 4)
+
+      console.log(`[SDK] Success! TxID:`, result.txid)
+      setStatus(`${type} successful! TxID: ${result.txid}`)
     } catch (err: any) {
       console.error(err)
-      setStatus(`Error: ${err.message || 'Check Console'}`)
+      const errorMsg = err.response?.data?.message || err.message || 'Check Console'
+      setStatus(`Error: ${errorMsg}`)
     }
   }
 
