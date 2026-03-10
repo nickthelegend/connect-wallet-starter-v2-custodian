@@ -6,14 +6,14 @@ export class AlgoWalletProvider implements CustomProvider {
     private baseUrl = 'https://kyra.algocraft.fun' 
 
     async connect(): Promise<WalletAccount[]> {
-        console.log('[AlgoVault] Opening connect popup...')
+        console.log('[Kyra] Opening connect popup...')
         return new Promise((resolve, reject) => {
-            const popup = window.open(`${this.baseUrl}/rpc?type=connect`, 'AlgoVault', 'width=450,height=700')
+            const popup = window.open(`${this.baseUrl}/rpc?type=connect`, 'Kyra', 'width=450,height=700')
 
             const handler = (event: MessageEvent) => {
                 if (event.origin !== this.baseUrl) return
                 if (event.data.type === 'ALGO_WALLET_RESPONSE') {
-                    console.log('[AlgoVault] Connected:', event.data.address)
+                    console.log('[Kyra] Connected:', event.data.address)
                     window.removeEventListener('message', handler)
                     this.accounts = [{ name: event.data.name, address: event.data.address }]
                     resolve(this.accounts)
@@ -33,12 +33,12 @@ export class AlgoWalletProvider implements CustomProvider {
     }
 
     async disconnect(): Promise<void> {
-        console.log('[AlgoVault] Disconnecting...')
+        console.log('[Kyra] Disconnecting...')
         this.accounts = []
     }
 
     async resumeSession(): Promise<WalletAccount[] | void> {
-        console.log('[AlgoVault] Resuming session...')
+        console.log('[Kyra] Resuming session...')
         // For simplicity, we'll return nothing, meaning they need to reconnect.
         return undefined
     }
@@ -47,7 +47,7 @@ export class AlgoWalletProvider implements CustomProvider {
         txnGroup: T | T[],
         indexesToSign?: number[]
     ): Promise<(Uint8Array | null)[]> {
-        console.log('[AlgoVault] Signing transactions:', txnGroup)
+        console.log('[Kyra] Signing transactions:', txnGroup)
 
         // Ensure we're working with a single group of transactions
         const firstGroup = Array.isArray(txnGroup[0]) ? (txnGroup[0] as unknown as (algosdk.Transaction | Uint8Array)[]) : (txnGroup as unknown as (algosdk.Transaction | Uint8Array)[])
@@ -61,12 +61,12 @@ export class AlgoWalletProvider implements CustomProvider {
         const data = encodeURIComponent(JSON.stringify(txnsToSign))
 
         return new Promise((resolve) => {
-            const popup = window.open(`${this.baseUrl}/rpc?type=sign&txns=${data}`, 'AlgoVault', 'width=450,height=700')
+            const popup = window.open(`${this.baseUrl}/rpc?type=sign&txns=${data}`, 'Kyra', 'width=450,height=700')
 
             const handler = (event: MessageEvent) => {
                 if (event.origin !== this.baseUrl) return
                 if (event.data.type === 'ALGO_WALLET_RESPONSE') {
-                    console.log('[AlgoVault] Signing complete')
+                    console.log('[Kyra] Signing complete')
                     window.removeEventListener('message', handler)
 
                     // Decode base64 strings back to Uint8Arrays

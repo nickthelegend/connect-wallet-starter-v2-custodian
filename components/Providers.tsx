@@ -14,8 +14,8 @@ const walletManager = new WalletManager({
         provider: new AlgoWalletProvider()
       },
       metadata: {
-        name: 'AlgoVault',
-        icon: 'https://img.icons8.com/isometric/50/shield.png'
+        name: 'Kyra Wallet',
+        icon: '/logo.png'
       }
     }
   ],
