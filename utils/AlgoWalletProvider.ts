@@ -3,8 +3,7 @@ import algosdk from 'algosdk'
 
 export class AlgoWalletProvider implements CustomProvider {
     private accounts: WalletAccount[] = []
-    // Update this URL to YOUR Vercel URL once you deploy the algo-wallet frontend!
-    private baseUrl = 'https://algovault-wallet.vercel.app' 
+    private baseUrl = 'https://kyra.algocraft.fun' 
 
     async connect(): Promise<WalletAccount[]> {
         console.log('[AlgoVault] Opening connect popup...')
