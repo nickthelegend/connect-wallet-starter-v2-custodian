@@ -49,11 +49,16 @@ export class AlgoWalletProvider implements CustomProvider {
     ): Promise<(Uint8Array | null)[]> {
         console.log('[AlgoVault] Signing transactions:', txnGroup)
 
-        // Serialize transactions for the popup (simplified for demo)
-        const data = btoa(JSON.stringify(txnGroup.map(t => ({ note: 'Review this txn' }))))
+        // Properly serialize Transactions to Base64 msgpack for the popup
+        const txnsToSign = txnGroup.map(t => {
+            const bytes = t instanceof Uint8Array ? t : algosdk.encodeUnsignedTransaction(t)
+            return Buffer.from(bytes).toString('base64')
+        })
+
+        const data = encodeURIComponent(JSON.stringify(txnsToSign))
 
         return new Promise((resolve) => {
-            const popup = window.open(`${this.baseUrl}/rpc?type=sign&data=${data}`, 'AlgoVault', 'width=450,height=700')
+            const popup = window.open(`${this.baseUrl}/rpc?type=sign&txns=${data}`, 'AlgoVault', 'width=450,height=700')
 
             const handler = (event: MessageEvent) => {
                 if (event.origin !== this.baseUrl) return

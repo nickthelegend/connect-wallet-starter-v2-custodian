@@ -1,8 +1,11 @@
 'use client'
 
-import { LayoutGrid, ShieldCheck, Zap } from 'lucide-react'
+import { LayoutGrid, ShieldCheck, Zap, ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 import { useWallet } from '@txnlab/use-wallet-react'
+import algosdk from 'algosdk'
+
+const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '')
 
 export default function Home() {
   return (
@@ -52,43 +55,146 @@ function SignTransactionDebug() {
   const { activeAccount, signTransactions } = useWallet()
   const [status, setStatus] = useState<string>('')
 
-  const handleSignTxn = async () => {
+  const handleSignTxn = async (type: 'payment' | 'appCall' | 'assetCreate' | 'atomic' | 'rekey') => {
     if (!activeAccount) {
       setStatus('Please connect wallet first')
       return
     }
 
-    setStatus('Requesting signature...')
+    setStatus(`Fetching Params...`)
     try {
-      // Mock transaction object
-      const mockTxn = {
-        from: activeAccount.address,
-        to: 'ALGO_RECEIVER_ADDRESS',
-        amount: 1000000,
-        note: 'Debug transaction'
+      const params = await algodClient.getTransactionParams().do()
+      let txns: algosdk.Transaction[] = [];
+
+      if (type === 'payment') {
+        txns = [algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          sender: activeAccount.address,
+          receiver: 'BEXSSCKJRHVY6YDRTGDK4HDUEQTHWZ2FI3SF2GYFI6VCSIA36QWMHCI4UE',
+          amount: 1000000,
+          suggestedParams: params,
+          note: new Uint8Array(Buffer.from('Real SDK Payment'))
+        })]
+      } else if (type === 'assetCreate') {
+        // Detailed asset creation from Intermezzo tests
+        txns = [algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
+          sender: activeAccount.address,
+          total: 1000000,
+          decimals: 6,
+          unitName: 'AVT',
+          assetName: 'AlgoVault Token',
+          assetURL: 'https://algovault.io',
+          manager: activeAccount.address,
+          reserve: activeAccount.address,
+          freeze: activeAccount.address,
+          clawback: activeAccount.address,
+          suggestedParams: params
+        })]
+      } else if (type === 'atomic') {
+        // Atomic Group: Payment + App Call with Foreign Arrays
+        const pTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          sender: activeAccount.address,
+          receiver: 'BEXSSCKJRHVY6YDRTGDK4HDUEQTHWZ2FI3SF2GYFI6VCSIA36QWMHCI4UE',
+          amount: 500000,
+          suggestedParams: params
+        })
+        const aTxn = algosdk.makeApplicationNoOpTxnFromObject({
+          sender: activeAccount.address,
+          appIndex: 754755349,
+          appArgs: [new Uint8Array(Buffer.from('debug'))],
+          accounts: ['CHIJEK5EF3DD6EHCM23CV6IXO7JI4YIOHGN6755G6X3NQVYVKJV3WM7M2A'],
+          foreignAssets: [723769800],
+          suggestedParams: params
+        })
+        algosdk.assignGroupID([pTxn, aTxn])
+        txns = [pTxn, aTxn]
+      } else if (type === 'appCall') {
+        txns = [algosdk.makeApplicationNoOpTxnFromObject({
+          sender: activeAccount.address,
+          appIndex: 1001,
+          suggestedParams: params,
+          note: new Uint8Array(Buffer.from('Simple App Call'))
+        })]
+      } else if (type === 'rekey') {
+        txns = [algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          sender: activeAccount.address,
+          receiver: activeAccount.address,
+          amount: 0,
+          rekeyTo: activeAccount.address, // Security demo: rekey to self
+          suggestedParams: params,
+          note: new Uint8Array(Buffer.from('Rekey Demo'))
+        })]
       }
 
-      // @ts-ignore - passing mock object for demo
-      const result = await signTransactions([mockTxn])
-      console.log('[Debug] Sign Result:', result)
-      setStatus('Transaction Signed Successfully! (Check Console)')
-    } catch (err) {
+      setStatus(`Signing Group...`)
+      const result = await signTransactions(txns)
+      console.log(`[SDK] Result for ${type}:`, result)
+      setStatus(`${type} processed successfully!`)
+    } catch (err: any) {
       console.error(err)
-      setStatus('Signing Failed')
+      setStatus(`Error: ${err.message || 'Check Console'}`)
     }
   }
 
   return (
     <div className="mt-12 p-8 glass rounded-2xl border border-zinc-800 w-full max-w-md mx-auto">
-      <h3 className="text-sm font-bold uppercase mb-4 tracking-widest text-teal-500">Debug Console</h3>
-      <button
-        onClick={handleSignTxn}
-        disabled={!activeAccount}
-        className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-xs transition-all ${activeAccount ? 'bg-teal-500 text-black hover:scale-105' : 'bg-zinc-900 text-zinc-700 cursor-not-allowed'}`}
-      >
-        Sign Random Txn
-      </button>
-      {status && <p className="mt-4 text-[10px] uppercase text-zinc-500">{status}</p>}
+      <div className="flex items-center gap-2 mb-6 text-teal-500">
+        <ShieldCheck size={18} />
+        <h3 className="text-xs font-bold uppercase tracking-widest">Advanced Transaction Lab</h3>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => handleSignTxn('payment')}
+          disabled={!activeAccount}
+          className={`w-full py-4 rounded-xl flex items-center justify-between px-6 group transition-all ${activeAccount ? 'bg-teal-500 text-black hover:bg-teal-400' : 'bg-zinc-900 text-zinc-700 cursor-not-allowed'}`}
+        >
+          <span className="font-bold text-xs uppercase tracking-tighter">1. Simple Payment</span>
+          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+        </button>
+
+        <button
+          onClick={() => handleSignTxn('assetCreate')}
+          disabled={!activeAccount}
+          className={`w-full py-4 rounded-xl flex items-center justify-between px-6 group transition-all ${activeAccount ? 'bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20' : 'bg-zinc-900 text-zinc-700 cursor-not-allowed'}`}
+        >
+          <span className="font-bold text-xs uppercase tracking-tighter">2. Create Asset (ASA)</span>
+          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+        </button>
+
+        <button
+          onClick={() => handleSignTxn('atomic')}
+          disabled={!activeAccount}
+          className={`w-full py-4 rounded-xl flex items-center justify-between px-6 group transition-all ${activeAccount ? 'bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20' : 'bg-zinc-900 text-zinc-700 cursor-not-allowed'}`}
+        >
+          <span className="font-bold text-xs uppercase tracking-tighter">3. Atomic Group (Transfer + App)</span>
+          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+        </button>
+
+        <button
+          onClick={() => handleSignTxn('appCall')}
+          disabled={!activeAccount}
+          className={`w-full py-4 rounded-xl flex items-center justify-between px-6 group transition-all ${activeAccount ? 'bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20' : 'bg-zinc-900 text-zinc-700 cursor-not-allowed'}`}
+        >
+          <span className="font-bold text-xs uppercase tracking-tighter">4. Smart Contract Call</span>
+          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+        </button>
+
+        <button
+          onClick={() => handleSignTxn('rekey')}
+          disabled={!activeAccount}
+          className={`w-full py-4 rounded-xl flex items-center justify-between px-6 group transition-all ${activeAccount ? 'bg-zinc-950 text-red-500 border border-red-900/30 hover:bg-red-900/10 hover:border-red-500/50' : 'bg-zinc-900 text-zinc-700 cursor-not-allowed'}`}
+        >
+          <span className="font-bold text-xs uppercase tracking-tighter">5. Rekey Account (L1 Security)</span>
+          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+        </button>
+      </div>
+
+      {status && (
+        <div className="mt-6 flex items-center gap-2 text-zinc-400 px-4 py-3 bg-black/40 rounded-lg border border-white/5">
+          <div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+          <p className="text-[10px] uppercase font-bold tracking-widest">{status}</p>
+        </div>
+      )}
     </div>
   )
 }
