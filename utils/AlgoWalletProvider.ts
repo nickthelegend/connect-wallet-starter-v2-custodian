@@ -69,10 +69,16 @@ export class AlgoWalletProvider implements CustomProvider {
                     console.log('[Kyra] Signing complete')
                     window.removeEventListener('message', handler)
 
-                    // Decode base64 strings back to Uint8Arrays
-                    const signedTxns = event.data.signedTxns.map((s: string | null) =>
-                        s ? new Uint8Array(Buffer.from(s, 'base64')) : null
-                    )
+                    // Decode base64 strings back to Uint8Arrays without relying on Node.js Buffer
+                    const signedTxns = event.data.signedTxns.map((s: string | null) => {
+                        if (!s) return null
+                        const binaryString = atob(s)
+                        const bytes = new Uint8Array(binaryString.length)
+                        for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i)
+                        }
+                        return bytes
+                    })
                     resolve(signedTxns)
                 }
             }
