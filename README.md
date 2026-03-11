@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💎 Algorand Connect Wallet Starter v2
 
-## Getting Started
+A premium, production-ready starter template for building Algorand applications with **Next.js 15**, **Tailwind CSS 4**, and **@txnlab/use-wallet**.
 
-First, run the development server:
+This starter provides a seamless integration for all major Algorand wallets (Pera, Defly, Lute) and includes a custom **Kyra Custodial Wallet** implementation for onboarding users without an existing wallet.
+
+![Kyra Logo](https://kyra.algocraft.fun/logo.png)
+
+## ✨ Features
+
+- ⚡ **Next.js 15 (App Router)** - The latest React framework for production.
+- 🎨 **Tailwind CSS 4** - Ultra-fast, modern styling with a sleek dark-mode aesthetic.
+- 🔌 **@txnlab/use-wallet** - Robust wallet management supporting Pera, Defly, Lute, and custom providers.
+- 🔐 **Kyra Custodial Provider** - A custom implementation of `CustomProvider` that connects to a Vault-backed custodial infrastructure.
+- ⚛️ **Advanced Transaction Lab** - Pre-built examples for Payment, ASA Creation, Atomic Groups, and Smart Contract calls.
+- 📱 **Mobile Responsive** - Designed to look stunning on every device.
+
+## 🚀 Getting Started
+
+### 1. Clone & Install
+
+```bash
+git clone https://github.com/nickthelegend/connect-wallet-starter-v2-custodian
+cd connect-wallet-starter-v2-custodian
+npm install
+```
+
+### 2. Configure Environment
+
+Create a `.env.local` file (or update `utils/AlgoWalletProvider.ts` directly) to point to your Kyra RPC endpoint:
+
+```env
+NEXT_PUBLIC_KYRA_BASE_URL=https://kyra.algocraft.fun
+```
+
+### 3. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to begin building.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠 Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Wallet Connectivity
 
-## Learn More
+The application uses the `useWallet` hook to manage connections. Configuration is handled in `components/Providers.tsx`.
 
-To learn more about Next.js, take a look at the following resources:
+```tsx
+import { useWallet } from '@txnlab/use-wallet-react'
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+const { activeAccount, signTransactions, sendTransactions } = useWallet()
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Custom Kyra Provider
 
-## Deploy on Vercel
+The `AlgoWalletProvider` class implements the `CustomProvider` interface, allowing you to bridge traditional custodial backends into the `@txnlab` ecosystem.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+It handles:
+- **Connection Popup**: Authenticates via Supabase/Auth.
+- **Transaction Signing**: Proxies signing requests to the Kyra Backend (Intermezzo).
+- **Auto-Submission**: Supports backend-handled transaction submission to bypass Vault read restrictions.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📦 Project Structure
+
+- `app/` - Next.js App Router pages and layouts.
+- `components/` - Reusable UI components including the Wallet Provider wrapper.
+- `utils/` - Core logic including the custom `AlgoWalletProvider`.
+- `public/` - Static assets and logos.
+
+## 🤝 Contributing
+
+We built this at 2AM on caffeine and chaos! If you want to improve this starter, feel free to open a PR.
+
+## 📜 License
+
+MIT
