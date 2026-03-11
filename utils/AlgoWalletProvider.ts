@@ -72,12 +72,25 @@ export class AlgoWalletProvider implements CustomProvider {
                     // Decode base64 strings back to Uint8Arrays without relying on Node.js Buffer
                     const signedTxns = event.data.signedTxns.map((s: string | null) => {
                         if (!s) return null
-                        const binaryString = atob(s)
-                        const bytes = new Uint8Array(binaryString.length)
-                        for (let i = 0; i < binaryString.length; i++) {
-                            bytes[i] = binaryString.charCodeAt(i)
+                        
+                        // Check if this is a TxID (52 chars) instead of a binary blob
+                        // This happens when the Kyra backend handles submission for us
+                        if (s.length === 52 && !s.includes('=') && !s.includes('+') && !s.includes('/')) {
+                            console.log('[Kyra] Transaction already submitted by backend. TxID:', s)
+                            return null // Return null so the SDK knows not to send it again
                         }
-                        return bytes
+
+                        try {
+                            const binaryString = atob(s)
+                            const bytes = new Uint8Array(binaryString.length)
+                            for (let i = 0; i < binaryString.length; i++) {
+                                bytes[i] = binaryString.charCodeAt(i)
+                            }
+                            return bytes
+                        } catch (e) {
+                            console.warn('[Kyra] Failed to decode transaction, might be a TxID:', s)
+                            return null
+                        }
                     })
                     resolve(signedTxns)
                 }
